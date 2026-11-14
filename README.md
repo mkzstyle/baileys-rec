@@ -1,8 +1,8 @@
-# 🚀 baileys-rec (v1.6.0)
+# 🚀 baileys-rec (v1.6.2)
 
 > **The Next-Generation WhatsApp Multi-Device & Meta Cloud API Library for Node.js.**
 > 
-> **v1.6.0 Flagship Release**: 100% Pure WhatsApp Protobuf (WAProto) support for ALL official Meta WhatsApp Business Cloud API message formats without requiring Meta developer accounts, business managers, or API keys!
+> **v1.6.2 Production Release**: 100% Pure WhatsApp Protobuf (WAProto) support for ALL official Meta WhatsApp Business Cloud API message formats without requiring Meta developer accounts, business managers, or API keys!
 > Includes WhatsApp Cloud Templates with parameters, WhatsApp Flows v3 Builder (`FlowBuilder`), Swipeable Multi-Card Carousel, Native One-Time Password (OTP) Copy Code, Voice Notes with Waveform visualization, WhatsApp Channel / Newsletter Management (`NewsletterHelper`), Single & Multi-Product Catalogs, Instant Pix Payments & Order Status Updates, In-App Webview, Polls, and zero-token universal format converters.
 
 [![npm version](https://img.shields.io/npm/v/baileys-rec.svg?style=flat-square&color=00d26a)](https://www.npmjs.com/package/baileys-rec)

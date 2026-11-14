@@ -242,6 +242,15 @@ declare function makeWASocket(config: any): {
     sendInteractive: (jid: string, content: any, options?: any) => Promise<any>;
     sendButton: (jid: string, content: any, options?: any) => Promise<any>;
     sendRichMessage: (jid: string, content: any, options?: any) => Promise<any>;
+    sendCloudApi: (jid: string, content: any, options?: any) => Promise<any>;
+    sendSingleProduct: (jid: string, content: any, options?: any) => Promise<any>;
+    sendProductList: (jid: string, content: any, options?: any) => Promise<any>;
+    sendPixPayment: (jid: string, content: any, options?: any) => Promise<any>;
+    sendCatalog: (jid: string, content?: any, options?: any) => Promise<any>;
+    sendFlow: (jid: string, content: any, options?: any) => Promise<any>;
+    sendEvent: (jid: string, eventConfig: any, options?: any) => Promise<any>;
+    pinMessage: (jid: string, key: any, durationInSeconds?: number, options?: any) => Promise<any>;
+    unpinMessage: (jid: string, key: any, options?: any) => Promise<any>;
     executeWMexQuery: (variables: any, queryId: any, dataPath: any) => Promise<any>;
     newsletterCreate: (name: any, description: any) => Promise<{
         id: any;

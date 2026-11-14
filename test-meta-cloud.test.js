@@ -591,3 +591,161 @@ test("Button fluent suite chains addOtp and addOrderStatus", () => {
     assert.equal(orderParams.reference_id, "ORD_100");
     assert.equal(orderParams.order_status, "completed");
 });
+
+test("generateWAMessageContent produces valid single_product with businessOwnerJid fallback and params", async () => {
+    const content = {
+        singleProduct: {
+            catalogId: "CAT_8899",
+            productRetailerId: "ITEM_AIR_MAX_90",
+            title: "Nike Air Max 90",
+            text: "Classic premium sneaker in triple white",
+            footer: "Nike Official Store",
+            buttonText: "🛍️ View Sneaker"
+        }
+    };
+    const protoMsg = await generateWAMessageContent(content, { userJid: "628123456789:2@s.whatsapp.net" });
+    const inner = protoMsg?.viewOnceMessage?.message?.interactiveMessage;
+    assert.ok(inner, "must produce interactiveMessage");
+    assert.equal(inner.body.text, "Classic premium sneaker in triple white");
+    assert.equal(inner.header.title, "Nike Air Max 90");
+    assert.equal(inner.footer.text, "Nike Official Store");
+    const buttons = inner.nativeFlowMessage?.buttons;
+    assert.equal(buttons.length, 1);
+    assert.equal(buttons[0].name, "single_product");
+    const params = JSON.parse(buttons[0].buttonParamsJson);
+    assert.equal(params.catalog_id, "CAT_8899");
+    assert.equal(params.product_retailer_id, "ITEM_AIR_MAX_90");
+    assert.equal(params.business_owner_jid, "628123456789@s.whatsapp.net");
+    assert.equal(params.display_text, "🛍️ View Sneaker");
+});
+
+test("generateWAMessageContent produces valid product_list with sections and businessOwnerJid", async () => {
+    const content = {
+        productList: {
+            catalogId: "CAT_SUMMER_2026",
+            title: "Summer 2026 Collection",
+            text: "Browse our newest footwear and apparel drops",
+            footer: "Summer Drop",
+            sections: [
+                {
+                    title: "Footwear",
+                    highlight_label: "Best Seller",
+                    product_items: [
+                        { product_retailer_id: "SHOE_01" },
+                        { product_retailer_id: "SHOE_02" }
+                    ]
+                },
+                {
+                    title: "Apparel",
+                    rows: ["TEE_01", "HOODIE_01"]
+                }
+            ]
+        }
+    };
+    const protoMsg = await generateWAMessageContent(content, { userJid: "628987654321@s.whatsapp.net" });
+    const inner = protoMsg?.viewOnceMessage?.message?.interactiveMessage;
+    assert.ok(inner, "must produce interactiveMessage");
+    const buttons = inner.nativeFlowMessage?.buttons;
+    assert.equal(buttons.length, 1);
+    assert.equal(buttons[0].name, "product_list");
+    const params = JSON.parse(buttons[0].buttonParamsJson);
+    assert.equal(params.catalog_id, "CAT_SUMMER_2026");
+    assert.equal(params.business_owner_jid, "628987654321@s.whatsapp.net");
+    assert.equal(params.sections.length, 2);
+    assert.equal(params.sections[0].title, "Footwear");
+    assert.equal(params.sections[0].product_items[0].product_retailer_id, "SHOE_01");
+    assert.equal(params.sections[1].product_items[0].product_retailer_id, "TEE_01");
+});
+
+test("generateWAMessageContent produces valid Pix Instant Payment (review_and_pay)", async () => {
+    const content = {
+        pixPayment: {
+            pixCode: "00020126580014BR.GOV.BCB.PIX0136123e4567-e12b-12d1-a456-426614174000520400005303986540510.005802BR5913Merchant6008BRASILIA62070503***6304",
+            amount: 150.50,
+            currency: "BRL",
+            merchantName: "São Paulo Coffee Roasters",
+            text: "Order #8831 - 2x Espresso Beans",
+            buttonText: "💳 Pagar com PIX"
+        }
+    };
+    const protoMsg = await generateWAMessageContent(content, {});
+    const inner = protoMsg?.viewOnceMessage?.message?.interactiveMessage;
+    assert.ok(inner, "must produce interactiveMessage");
+    assert.equal(inner.body.text, "Order #8831 - 2x Espresso Beans");
+    const buttons = inner.nativeFlowMessage?.buttons;
+    assert.equal(buttons.length, 1);
+    assert.equal(buttons[0].name, "review_and_pay");
+    const params = JSON.parse(buttons[0].buttonParamsJson);
+    assert.equal(params.currency, "BRL");
+    assert.deepEqual(params.total_amount, { value: 15050, offset: 100 });
+    assert.equal(params.payment_type, "pix");
+    assert.equal(params.merchant_name, "São Paulo Coffee Roasters");
+    assert.ok(params.pix_code.startsWith("00020126"));
+    assert.equal(params.payment_settings[0].type, "pix_dynamic_code");
+    assert.equal(params.payment_settings[0].pix_dynamic_code.code, params.pix_code);
+});
+
+test("Button.addPixPayment and ButtonBuilder.addPixPayment handle flexible argument ordering", () => {
+    // 1. pixKey first
+    const btn1 = new Button().addPixPayment("000201PIXCODE", 50, "Store A", "Pay 50");
+    const p1 = JSON.parse(btn1._buttons[0].buttonParamsJson);
+    assert.equal(p1.pix_code, "000201PIXCODE");
+    assert.deepEqual(p1.total_amount, { value: 5000, offset: 100 });
+    assert.equal(p1.merchant_name, "Store A");
+
+    // 2. amount first
+    const btn2 = new Button().addPixPayment(75, "000201PIXCODE", "Store B", "Pay 75");
+    const p2 = JSON.parse(btn2._buttons[0].buttonParamsJson);
+    assert.equal(p2.pix_code, "000201PIXCODE");
+    assert.deepEqual(p2.total_amount, { value: 7500, offset: 100 });
+    assert.equal(p2.merchant_name, "Store B");
+
+    // 3. ButtonBuilder addProduct & addProductList flat items
+    const bb = new ButtonBuilder()
+        .addProduct("PROD_99", "CAT_11", "View Item", { businessOwnerJid: "123@s.whatsapp.net" })
+        .addProductList("CAT_11", ["ITEM_A", "ITEM_B"], "View List");
+    assert.equal(bb.buttons[0].name, "single_product");
+    assert.equal(bb.buttons[0].business_owner_jid, "123@s.whatsapp.net");
+    assert.equal(bb.buttons[1].name, "product_list");
+    assert.equal(bb.buttons[1].sections[0].product_items[0].product_retailer_id, "ITEM_A");
+});
+
+test("toCloudApiMessage converts single_product, product_list, and pixPayment to official Meta Cloud API formats", () => {
+    // 1. Single Product
+    const spPayload = toCloudApiMessage({
+        singleProduct: {
+            catalogId: "CAT_1",
+            productRetailerId: "ITEM_1",
+            title: "Featured Item",
+            text: "Details about item"
+        }
+    }, "5511999998888");
+    assert.equal(spPayload.to, "5511999998888");
+    assert.equal(spPayload.interactive.type, "product");
+    assert.equal(spPayload.interactive.action.catalog_id, "CAT_1");
+    assert.equal(spPayload.interactive.action.product_retailer_id, "ITEM_1");
+
+    // 2. Product List
+    const plPayload = toCloudApiMessage({
+        productList: {
+            catalogId: "CAT_2",
+            sections: [{ title: "Sneakers", product_items: [{ product_retailer_id: "SNK_1" }] }]
+        }
+    }, "5511999998888");
+    assert.equal(plPayload.interactive.type, "product_list");
+    assert.equal(plPayload.interactive.action.catalog_id, "CAT_2");
+    assert.equal(plPayload.interactive.action.sections.length, 1);
+
+    // 3. Pix Payment
+    const pixPayload = toCloudApiMessage({
+        pixPayment: {
+            pixCode: "000201...",
+            amount: 250,
+            merchantName: "Coffee Brasil"
+        }
+    }, "5511999998888");
+    assert.equal(pixPayload.interactive.type, "review_and_pay");
+    assert.equal(pixPayload.interactive.action.parameters.payment_type, "pix");
+    assert.equal(pixPayload.interactive.action.parameters.currency, "BRL");
+    assert.deepEqual(pixPayload.interactive.action.parameters.total_amount, { value: 25000, offset: 100 });
+});
